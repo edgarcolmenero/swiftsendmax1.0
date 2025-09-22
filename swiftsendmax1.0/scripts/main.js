@@ -19,7 +19,7 @@ const MODULES = [
   ['./modules/revealOnce.js', 'initRevealOnce'], // idempotent; safe to call again
   ['./modules/savingsEstimator.js', 'initSavingsEstimator'],
   ['./modules/underline.js', 'initUnderline'],
-  ['./modules/motion.js', 'initMotion'],
+  ['./utils/motion.js', 'initMotion'],
   ['./utils/dom.js', null],       // utilities (no init)
   ['./utils/observe.js', null],   // utilities (no init)
 ];
