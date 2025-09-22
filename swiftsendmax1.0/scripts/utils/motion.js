@@ -1,4 +1,4 @@
-// /scripts/modules/motion.js
+// /scripts/utils/motion.js
 // Motion utilities: reveal animations and scroll-driven class toggles
 
 import { qsa } from "../utils/dom.js";
