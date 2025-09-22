@@ -1,7 +1,11 @@
 // /scripts/modules/header.js
 // Desktop active link sync + mobile full-screen menu toggle with focus trap
 
-import { qs, qsa, addClass, removeClass, toggleClass } from "../utils/dom.js";
+import { qs, qsa, addClass, removeClass } from "../utils/dom.js";
+
+const MENU_SELECTOR = ".ss-mobile-menu";
+const TOGGLE_SELECTOR = "[data-open-menu]";
+const CLOSE_SELECTOR = "[data-close-menu]";
 
 let lastActiveLink = null;
 let lastFocusedEl = null;
@@ -22,12 +26,14 @@ function setActiveLink() {
 
 function openMenu() {
   const body = document.body;
-  const menu = qs(".mobile-menu");
-  const toggle = qs(".menu-toggle");
+  const menu = qs(MENU_SELECTOR);
+  const toggle = qs(TOGGLE_SELECTOR);
+
+  if (!menu) return;
 
   addClass(body, "menu-open");
-  addClass(menu, "is-open");
-  addClass(toggle, "is-active");
+  menu.setAttribute("aria-hidden", "false");
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
 
   lastFocusedEl = document.activeElement;
   trapFocus(menu);
@@ -37,22 +43,34 @@ function openMenu() {
 
 function closeMenu() {
   const body = document.body;
-  const menu = qs(".mobile-menu");
-  const toggle = qs(".menu-toggle");
+  const menu = qs(MENU_SELECTOR);
+  const toggle = qs(TOGGLE_SELECTOR);
+
+  if (!menu) return;
 
   removeClass(body, "menu-open");
-  removeClass(menu, "is-open");
-  removeClass(toggle, "is-active");
+  menu.setAttribute("aria-hidden", "true");
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
 
   releaseFocus();
 
   document.removeEventListener("keydown", handleEsc);
 
-  if (lastFocusedEl) lastFocusedEl.focus();
+  if (lastFocusedEl) {
+    lastFocusedEl.focus();
+    lastFocusedEl = null;
+  }
 }
 
 function toggleMenu() {
-  document.body.classList.contains("menu-open") ? closeMenu() : openMenu();
+  const toggle = qs(TOGGLE_SELECTOR);
+  const isExpanded = toggle?.getAttribute("aria-expanded") === "true";
+
+  if (isExpanded) {
+    closeMenu();
+  } else {
+    openMenu();
+  }
 }
 
 function handleEsc(e) {
@@ -69,6 +87,12 @@ function trapFocus(container) {
     container
   ).filter((el) => !el.disabled && el.offsetParent !== null);
 
+  if (!focusableEls.length) {
+    firstEl = null;
+    lastEl = null;
+    return;
+  }
+
   firstEl = focusableEls[0];
   lastEl = focusableEls[focusableEls.length - 1];
 
@@ -76,7 +100,7 @@ function trapFocus(container) {
 }
 
 function releaseFocus() {
-  const menu = qs(".mobile-menu");
+  const menu = qs(MENU_SELECTOR);
   if (menu) menu.removeEventListener("keydown", handleTab);
 }
 
@@ -101,11 +125,9 @@ export function initHeader() {
   window.addEventListener("scroll", setActiveLink);
 
   // Mobile menu toggle
-  const toggle = qs(".menu-toggle");
+  const toggle = qs(TOGGLE_SELECTOR);
   if (toggle) toggle.addEventListener("click", toggleMenu);
 
-  // Close menu on nav link click
-  qsa(".mobile-menu a").forEach((link) =>
-    link.addEventListener("click", closeMenu)
-  );
+  // Close menu on nav link click or explicit close button
+  qsa(CLOSE_SELECTOR).forEach((el) => el.addEventListener("click", closeMenu));
 }
