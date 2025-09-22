@@ -23,9 +23,15 @@ function addUnderlineEffect(link) {
 }
 
 export function initUnderline() {
-  qsa(".u-underline").forEach((link) => {
-    if (!link.querySelector(".u-underline__line")) {
+  const targets = new Set([
+    ...qsa(".u-underline"),
+    ...qsa("[data-underline]")
+  ]);
+
+  targets.forEach((link) => {
+    if (typeof link.querySelector !== "function" || !link.querySelector(".u-underline__line")) {
       addUnderlineEffect(link);
     }
+    link.classList.add("u-underline");
   });
 }

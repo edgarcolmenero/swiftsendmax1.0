@@ -3,53 +3,95 @@
 
 import { qs, qsa } from "../utils/dom.js";
 
-function updateValues() {
-  const sliders = qsa(".estimator [type='range']");
-  const pills = qsa(".estimator [data-value]");
+const CARD_PERCENT = 0.029;
+const CARD_FIXED = 0.3;
+const ACH_PERCENT = 0.01;
+const ACH_FIXED = 0.05;
 
-  let base = 0;
-
-  sliders.forEach((slider) => {
-    base += parseInt(slider.value, 10) || 0;
-  });
-
-  pills.forEach((pill) => {
-    if (pill.getAttribute("aria-pressed") === "true") {
-      base += parseInt(pill.dataset.value, 10) || 0;
-    }
-  });
-
-  const monthly = base;
-  const yearly = monthly * 12;
-
-  const valEl = qs(".estimator__value");
-  if (valEl) valEl.textContent = `$${monthly.toLocaleString()}/mo`;
-
-  const yearEl = qs(".estimator__yearly");
-  if (yearEl) yearEl.textContent = `$${yearly.toLocaleString()}/yr`;
+function formatCurrency(value, digits = 0) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
 }
 
-function handleSlider(e) {
-  const out = e.target.nextElementSibling;
-  if (out) out.textContent = e.target.value;
-  updateValues();
+function updateDisplays(container, { volume, ticket, shift }) {
+  const volumeEls = qsa("[data-display='volume']", container);
+  const ticketEls = qsa("[data-display='ticket']", container);
+  const achEls = qsa("[data-display='ach']", container);
+
+  volumeEls.forEach((el) => (el.textContent = formatCurrency(volume)));
+  ticketEls.forEach((el) => (el.textContent = formatCurrency(ticket)));
+  achEls.forEach((el) => (el.textContent = `${Math.round(shift)}%`));
 }
 
-function handlePillClick(e) {
-  const btn = e.currentTarget;
-  const pressed = btn.getAttribute("aria-pressed") === "true";
-  btn.setAttribute("aria-pressed", String(!pressed));
-  updateValues();
+function calculateSavings(volume, ticket, shiftPercent) {
+  const shiftRatio = Math.max(0, Math.min(shiftPercent, 100)) / 100;
+  const shiftedVolume = volume * shiftRatio;
+  const safeTicket = Math.max(ticket, 1);
+  const transactions = shiftedVolume / safeTicket;
+
+  const cardFees = shiftedVolume * CARD_PERCENT + transactions * CARD_FIXED;
+  const achFees = shiftedVolume * ACH_PERCENT + transactions * ACH_FIXED;
+  const monthlySavings = Math.max(cardFees - achFees, 0);
+
+  return {
+    monthly: monthlySavings,
+    yearly: monthlySavings * 12,
+  };
+}
+
+function updateResults(container, savings) {
+  const valueEl = qs(".estimator__value", container);
+  const yearlyEl = qs(".estimator__yearly", container);
+
+  if (valueEl) valueEl.textContent = `${formatCurrency(savings.monthly)}/mo`;
+  if (yearlyEl) yearlyEl.textContent = `${formatCurrency(savings.yearly)}/yr`;
 }
 
 export function initSavingsEstimator() {
-  qsa(".estimator [type='range']").forEach((slider) =>
-    slider.addEventListener("input", handleSlider)
-  );
+  const wrapper = qs("[data-module='savingsEstimator']");
+  if (!wrapper) return;
 
-  qsa(".estimator [data-value]").forEach((pill) =>
-    pill.addEventListener("click", handlePillClick)
-  );
+  const sliders = qsa(".slider", wrapper);
+  const pills = qsa(".pills [data-value]", wrapper);
 
-  updateValues();
+  const getState = () => {
+    const volumeSlider = qs("#volumeRange", wrapper);
+    const ticketSlider = qs("#ticketRange", wrapper);
+    const selectedPill = pills.find((pill) => pill.getAttribute("aria-pressed") === "true");
+
+    const volume = parseFloat(volumeSlider?.value || "0");
+    const ticket = parseFloat(ticketSlider?.value || "1");
+    const shift = parseFloat(selectedPill?.dataset.value || "0");
+
+    return { volume, ticket, shift };
+  };
+
+  const refresh = () => {
+    const state = getState();
+    updateDisplays(wrapper, state);
+    const savings = calculateSavings(state.volume, state.ticket, state.shift);
+    updateResults(wrapper, savings);
+  };
+
+  sliders.forEach((slider) => {
+    slider.addEventListener("input", () => {
+      const readout = slider.nextElementSibling;
+      if (readout) readout.textContent = slider.value;
+      refresh();
+    });
+  });
+
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      pills.forEach((btn) => btn.setAttribute("aria-pressed", "false"));
+      pill.setAttribute("aria-pressed", "true");
+      refresh();
+    });
+  });
+
+  refresh();
 }

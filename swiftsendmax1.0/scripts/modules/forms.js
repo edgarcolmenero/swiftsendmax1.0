@@ -1,22 +1,83 @@
 // /scripts/modules/forms.js
 // Enhance forms: validation hints, async submission, feedback
 
-import { qs, qsa, addClass, removeClass } from "../utils/dom.js";
+import { qs, qsa, addClass, removeClass, toggleClass } from "../utils/dom.js";
+
+const INVALID_CLASS = "is-invalid";
+
+function getFieldWrapper(field) {
+  return field.closest(".field") || field.closest("label");
+}
+
+function updateFilledState(field) {
+  const wrapper = getFieldWrapper(field);
+  if (!wrapper) return;
+  toggleClass(wrapper, "is-filled", field.value.trim().length > 0);
+}
+
+function setInvalidState(field, message) {
+  field.setCustomValidity(message ?? "");
+  const wrapper = getFieldWrapper(field);
+  if (wrapper) {
+    toggleClass(wrapper, INVALID_CLASS, Boolean(message));
+  }
+  field.setAttribute("aria-invalid", message ? "true" : "false");
+}
 
 function validateField(field) {
-  if (!field.hasAttribute("required")) return true;
-  if (field.type === "email") {
-    const valid = /\S+@\S+\.\S+/.test(field.value.trim());
-    field.setCustomValidity(valid ? "" : "Please enter a valid email.");
-    return valid;
+  if (field.disabled || field.type === "submit") return true;
+
+  const value = field.value.trim();
+
+  if (field.required && !value) {
+    setInvalidState(field, "This field is required.");
+    return false;
   }
-  const valid = field.value.trim() !== "";
-  field.setCustomValidity(valid ? "" : "This field is required.");
-  return valid;
+
+  if (field.type === "email" && value) {
+    const valid = /\S+@\S+\.\S+/.test(value);
+    if (!valid) {
+      setInvalidState(field, "Please enter a valid email address.");
+      return false;
+    }
+  }
+
+  setInvalidState(field, "");
+  return true;
 }
 
 function handleInput(e) {
-  validateField(e.target);
+  const field = e.target;
+  updateFilledState(field);
+  validateField(field);
+}
+
+function attachFieldListeners(field) {
+  field.addEventListener("input", handleInput);
+  field.addEventListener("blur", () => {
+    updateFilledState(field);
+    validateField(field);
+  });
+  // Initialise filled state for prefilled inputs
+  updateFilledState(field);
+}
+
+function simulateSubmit(form) {
+  const status = qs(".form-status", form.closest(".contact-card") || form);
+  addClass(form, "is-submitting");
+  if (status) status.textContent = "Submitting…";
+
+  setTimeout(() => {
+    removeClass(form, "is-submitting");
+    addClass(form, "is-success");
+    if (status) status.textContent = "Thanks! We’ll reach out within one business day.";
+    form.reset();
+    qsa("input, textarea, select", form).forEach((field) => {
+      updateFilledState(field);
+      setInvalidState(field, "");
+    });
+    setTimeout(() => removeClass(form, "is-success"), 3200);
+  }, 1200);
 }
 
 function handleSubmit(e) {
@@ -26,31 +87,22 @@ function handleSubmit(e) {
   let valid = true;
 
   fields.forEach((field) => {
-    if (!validateField(field)) {
-      valid = false;
-      addClass(field, "is-invalid");
-    } else {
-      removeClass(field, "is-invalid");
-    }
+    const ok = validateField(field);
+    if (!ok) valid = false;
   });
 
-  if (!valid) return;
+  if (!valid) {
+    const status = qs(".form-status", form.closest(".contact-card") || form);
+    if (status) status.textContent = "Please fix the highlighted fields.";
+    return;
+  }
 
-  // Simulate async submit
-  addClass(form, "is-submitting");
-  setTimeout(() => {
-    removeClass(form, "is-submitting");
-    addClass(form, "is-success");
-    form.reset();
-    setTimeout(() => removeClass(form, "is-success"), 3000);
-  }, 1200);
+  simulateSubmit(form);
 }
 
 export function initForms() {
   qsa("form").forEach((form) => {
     form.addEventListener("submit", handleSubmit);
-    qsa("input, textarea, select", form).forEach((field) =>
-      field.addEventListener("input", handleInput)
-    );
+    qsa("input, textarea, select", form).forEach(attachFieldListeners);
   });
 }

@@ -9,9 +9,19 @@ let timer;
 
 function activateStep(index) {
   steps.forEach((step, i) => {
-    if (i === index) addClass(step, "is-active");
-    else removeClass(step, "is-active");
+    toggleStep(step, i === index);
   });
+}
+
+function toggleStep(step, isActive) {
+  if (!step) return;
+  if (isActive) {
+    addClass(step, "is-active");
+    step.setAttribute("data-active", "true");
+  } else {
+    removeClass(step, "is-active");
+    step.setAttribute("data-active", "false");
+  }
 }
 
 function autoSequence(interval = 4000) {
@@ -24,7 +34,7 @@ function autoSequence(interval = 4000) {
 }
 
 export function initProcessFlow() {
-  steps = qsa(".process-step");
+  steps = qsa(".process .step-card");
   if (!steps.length) return;
 
   activateStep(0);

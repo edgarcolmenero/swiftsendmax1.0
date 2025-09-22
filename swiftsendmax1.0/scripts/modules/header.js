@@ -7,15 +7,19 @@ let lastActiveLink = null;
 let lastFocusedEl = null;
 
 function setActiveLink() {
-  const links = qsa("nav a[href^='#']");
+  const links = qsa(".nav a[href^='#']");
   const fromTop = window.scrollY + 100;
 
   links.forEach((link) => {
     const section = qs(link.getAttribute("href"));
     if (section && section.offsetTop <= fromTop && section.offsetTop + section.offsetHeight > fromTop) {
-      if (lastActiveLink) lastActiveLink.classList.remove("is-active");
+      if (lastActiveLink) {
+        lastActiveLink.classList.remove("is-active");
+        lastActiveLink.removeAttribute("aria-current");
+      }
       link.classList.add("is-active");
       lastActiveLink = link;
+      link.setAttribute("aria-current", "true");
     }
   });
 }
@@ -23,11 +27,13 @@ function setActiveLink() {
 function openMenu() {
   const body = document.body;
   const menu = qs(".mobile-menu");
-  const toggle = qs(".menu-toggle");
+  const toggle = qs("[data-open-menu]");
 
   addClass(body, "menu-open");
   addClass(menu, "is-open");
-  addClass(toggle, "is-active");
+  toggleClass(toggle, "is-active", true);
+  if (menu) menu.setAttribute("aria-hidden", "false");
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
 
   lastFocusedEl = document.activeElement;
   trapFocus(menu);
@@ -38,11 +44,13 @@ function openMenu() {
 function closeMenu() {
   const body = document.body;
   const menu = qs(".mobile-menu");
-  const toggle = qs(".menu-toggle");
+  const toggle = qs("[data-open-menu]");
 
   removeClass(body, "menu-open");
   removeClass(menu, "is-open");
-  removeClass(toggle, "is-active");
+  toggleClass(toggle, "is-active", false);
+  if (menu) menu.setAttribute("aria-hidden", "true");
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
 
   releaseFocus();
 
@@ -101,11 +109,16 @@ export function initHeader() {
   window.addEventListener("scroll", setActiveLink);
 
   // Mobile menu toggle
-  const toggle = qs(".menu-toggle");
+  const toggle = qs("[data-open-menu]");
   if (toggle) toggle.addEventListener("click", toggleMenu);
 
   // Close menu on nav link click
-  qsa(".mobile-menu a").forEach((link) =>
-    link.addEventListener("click", closeMenu)
-  );
+  qsa("[data-close-menu]").forEach((el) => el.addEventListener("click", closeMenu));
+
+  // Ensure initial state attributes
+  const menu = qs(".mobile-menu");
+  if (menu) menu.setAttribute("aria-hidden", "true");
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
+
+  setActiveLink();
 }

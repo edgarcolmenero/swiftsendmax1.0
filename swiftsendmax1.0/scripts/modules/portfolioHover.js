@@ -3,28 +3,50 @@
 
 import { qs, qsa } from "../utils/dom.js";
 
-function handleFilterClick(e) {
-  const btn = e.currentTarget;
-  const category = btn.dataset.category;
+function createFilter(section) {
+  const buttons = qsa(".work__filters [data-filter]", section);
+  const cards = qsa(".work-card", section);
 
-  // Toggle aria-pressed
-  qsa(".work-filter [aria-pressed]").forEach((b) =>
-    b.setAttribute("aria-pressed", "false")
-  );
-  btn.setAttribute("aria-pressed", "true");
+  function applyFilter(filter) {
+    cards.forEach((card) => {
+      const tags = (card.dataset.tags || "")
+        .split(/\s+/)
+        .filter(Boolean);
+      const match = filter === "all" || tags.includes(filter);
+      card.hidden = !match;
+      card.setAttribute("aria-hidden", match ? "false" : "true");
+      card.classList.toggle("is-hidden", !match);
+    });
+  }
 
-  // Show/hide cards
-  qsa(".work-card").forEach((card) => {
-    const match = category === "all" || card.dataset.category === category;
-    card.classList.toggle("is-hidden", !match);
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const filter = btn.dataset.filter || "all";
+      buttons.forEach((other) => other.setAttribute("aria-selected", "false"));
+      btn.setAttribute("aria-selected", "true");
+      applyFilter(filter);
+    });
   });
+
+  const initial = buttons.find((btn) => btn.getAttribute("aria-selected") === "true");
+  applyFilter(initial?.dataset.filter || "all");
 }
 
 function enableVideoHover(card) {
   const video = card.querySelector("video");
   if (!video) return;
 
+  const source = video.dataset.hoverVideo;
+  let loaded = false;
+
+  const ensureSource = () => {
+    if (loaded || !source) return;
+    video.src = source;
+    loaded = true;
+  };
+
   const play = () => {
+    ensureSource();
     video.play().catch(() => {});
   };
   const pause = () => video.pause();
@@ -36,11 +58,9 @@ function enableVideoHover(card) {
 }
 
 export function initPortfolioHover() {
-  // Filter chips
-  qsa(".work-filter [data-category]").forEach((btn) =>
-    btn.addEventListener("click", handleFilterClick)
-  );
+  const section = qs(".work");
+  if (!section) return;
 
-  // Hover-play videos
-  qsa(".work-card").forEach(enableVideoHover);
+  createFilter(section);
+  qsa(".work-card", section).forEach(enableVideoHover);
 }
