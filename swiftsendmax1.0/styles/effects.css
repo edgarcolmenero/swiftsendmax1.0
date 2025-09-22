@@ -86,7 +86,37 @@
     position: absolute; inset: 0;
     pointer-events: none;
   }
-  
+
+  /* JS-driven parallax offsets (heroField.js writes --px/--py) */
+  .ss-hero {
+    --px: 0;
+    --py: 0;
+  }
+
+  .ss-hero .stars-layer,
+  .ss-hero .dust-layer,
+  .ss-hero .nebula-layer {
+    will-change: transform;
+  }
+
+  .ss-hero .stars-layer {
+    --stars-parallax-x: calc(var(--px, 0) * 26px);
+    --stars-parallax-y: calc(var(--py, 0) * 24px);
+    transform: translate3d(var(--stars-parallax-x), var(--stars-parallax-y), 0);
+  }
+
+  .ss-hero .dust-layer {
+    --dust-parallax-x: calc(var(--px, 0) * 40px);
+    --dust-parallax-y: calc(var(--py, 0) * 32px);
+    transform: translate3d(var(--dust-parallax-x), var(--dust-parallax-y), 0);
+  }
+
+  .ss-hero .nebula-layer {
+    --nebula-parallax-x: calc(var(--px, 0) * 60px);
+    --nebula-parallax-y: calc(var(--py, 0) * 48px);
+    transform: translate3d(var(--nebula-parallax-x), var(--nebula-parallax-y), 0);
+  }
+
   .stars-layer {
     background-image:
       radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.9) 50%, transparent 51%),
@@ -118,21 +148,33 @@
   
   /* Optional subtle drift (no JS): */
   @media (prefers-reduced-motion: no-preference) {
-    .stars-layer { animation: drift-stars 36s linear infinite alternate; }
-    .dust-layer  { animation: drift-dust  48s ease-in-out infinite alternate; }
-    .nebula-layer{ animation: drift-neb   60s ease-in-out infinite alternate; }
+    .ss-hero .stars-layer { animation: drift-stars 36s linear infinite alternate; }
+    .ss-hero .dust-layer  { animation: drift-dust  48s ease-in-out infinite alternate; }
+    .ss-hero .nebula-layer{ animation: drift-neb   60s ease-in-out infinite alternate; }
   }
   @keyframes drift-stars {
-    0% { transform: translate3d(0,0,0) scale(1); }
-    100% { transform: translate3d(-1.2%, -1.2%, 0) scale(1.02); }
+    0% {
+      transform: translate3d(var(--stars-parallax-x), var(--stars-parallax-y), 0) scale(1);
+    }
+    100% {
+      transform: translate3d(calc(var(--stars-parallax-x) - 12px), calc(var(--stars-parallax-y) - 12px), 0) scale(1.02);
+    }
   }
   @keyframes drift-dust {
-    0% { transform: translate3d(0,0,0); }
-    100% { transform: translate3d(1%, -0.6%, 0); }
+    0% {
+      transform: translate3d(var(--dust-parallax-x), var(--dust-parallax-y), 0);
+    }
+    100% {
+      transform: translate3d(calc(var(--dust-parallax-x) + 16px), calc(var(--dust-parallax-y) - 10px), 0);
+    }
   }
   @keyframes drift-neb {
-    0% { transform: translate3d(0,0,0); }
-    100% { transform: translate3d(-0.6%, 1%, 0); }
+    0% {
+      transform: translate3d(var(--nebula-parallax-x), var(--nebula-parallax-y), 0);
+    }
+    100% {
+      transform: translate3d(calc(var(--nebula-parallax-x) - 14px), calc(var(--nebula-parallax-y) + 18px), 0);
+    }
   }
   
   /* ---------------------------

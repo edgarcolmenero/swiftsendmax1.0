@@ -1,5 +1,5 @@
 // /scripts/modules/heroField.js
-// Light parallax for hero section: updates --px/--py on .hero.is-parallax
+// Light parallax for hero section: updates --px/--py on the hero wrapper
 // Disabled if prefers-reduced-motion is set
 
 import { prefersReducedMotion, rafQueue } from "../utils/dom.js";
@@ -28,7 +28,7 @@ function onScroll() {
 }
 
 export function initHeroField() {
-  heroEl = document.querySelector(".hero.is-parallax");
+  heroEl = document.querySelector('[data-module="heroField"], .ss-hero, .hero.is-parallax');
   if (!heroEl || prefersReducedMotion()) return;
 
   // Desktop: mousemove parallax
