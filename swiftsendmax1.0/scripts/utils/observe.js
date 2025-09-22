@@ -65,3 +65,18 @@ export function onEnter(el, handler, { once = false, ...opts } = {}) {
   const { observe } = makeObserver(opts);
   return observe(el, { onEnter: handler, once });
 }
+
+export function observeReveal(el, handler, { once = true, ...opts } = {}) {
+  if (!el || typeof handler !== 'function') return () => {};
+  return onEnter(
+    el,
+    (entry) => {
+      try {
+        handler(entry.target ?? el, entry);
+      } catch (err) {
+        console.error('[observeReveal] handler error:', err);
+      }
+    },
+    { once, ...opts }
+  );
+}
